@@ -7,7 +7,7 @@ This demo uses three.js ([https://github.com/mrdoob/three.js/][1]) and some part
 
 Currently, only Firefox is supported..
 
-Check out the [Demo][4]
+Check out the [Demo][3]
 
 Visit me at [http://www.orange-coding.net][4]
 
