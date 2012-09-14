@@ -15,6 +15,7 @@
 		<script type="text/javascript" src="js/three/Three.js"></script>
 		<script type="text/javascript" src="js/three/Stats.js"></script>
 		<script type="text/javascript" src="js/dsp.js"></script>
+		<script type="text/javascript" src="js/browserdetect.js"></script>
 		<link rel="shortcut icon" href="gfx/icon.ico" type="image/x-icon" />
 	</head>
 	<body>
@@ -23,9 +24,14 @@
 				3d visualization of an (HTML5) audiostream. Download the song <a href="http://www.jamendo.com/en/track/81740/sad-robot" target="_blank">here</a>  |  Press play to start the visualization and use your mousewheel.. ;)
 			</p>
 		</div>
+		<div class="browserDetection" id="browserDetection">
+				<img src="gfx/firefox.png"/><br>
+				Sorry, currently only Firefox (with activated WebGL) is supported.
+		</div>		
 		<div id="footer">
-			<audio id="player" src="audio/sadRobot.ogg" controls="true"></audio>
+			<audio id="player" class="player" src="audio/sadRobot.ogg" controls="true"></audio>
 		</div>	
 		<script type="text/javascript" src="js/audio.js"></script>
+
 	</body>
 </html>

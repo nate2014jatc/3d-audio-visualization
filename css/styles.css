@@ -27,7 +27,7 @@ body {
 .describtion {
 	margin:8px;
 }
-#player {
+.player {
 	width:100%;
 	height:30px;
 	margin:auto;
@@ -35,4 +35,15 @@ body {
 a {
 color: #ffff00;
     text-decoration: none;
+}
+.browserDetection {
+	z-index:10005;
+	height:100%;
+	width:100%;
+	margin: 0 auto;
+	text-align:center;
+	margin-top:50px;
+	color:#ffffff;
+	display:none;
+
 }
