@@ -13,7 +13,7 @@ var audioVisualization = new function(){
 	var stats, container;
 	
 	//Scene vars
-	var camera, scene, renderer;
+	var camera, scene, renderer, geometry;
 	
 	var colors = [];
 	
@@ -32,12 +32,15 @@ var audioVisualization = new function(){
 	//Particles
 	var particleCount = 63;
 	var particle, particles, material;
-	
+
 	//Audio
-	var channels, rate, frameBufferLength, fft, audiomultiplier;
-	var audio = document.getElementById('player');
-	var geometry = null;
-	
+	var fft,
+		context = new AudioContext(),
+		sourceNode,
+		analyser = context.createAnalyser(),
+		scriptProcessor;
+
+
 	var a = 0,b = 0;
 	return {
 		init: function(){
@@ -45,6 +48,73 @@ var audioVisualization = new function(){
 			container.setAttribute("id", "visframe");
 			
 			document.body.appendChild(container);
+
+			//Hook up the mouse-wheel events
+			document.addEventListener('mousemove', this.mousemove, false);
+			document.addEventListener('DOMMouseScroll', this.wheel, false);
+			document.addEventListener('mousewheel', this.wheel, false);
+
+
+			//Log the stats
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0';
+			stats.domElement.style.right = '0';
+			container.appendChild(stats.domElement);
+
+			//WebAudio Stuff
+			analyser.fftSize = 2048;
+			// setup a javascript node
+			scriptProcessor = context.createScriptProcessor(2048, 1, 1);
+			fft = new FFT(2048, context.sampleRate);
+			// connect to destination, else it isn't called
+			scriptProcessor.connect(context.destination);
+			// create a buffer source node
+			sourceNode = context.createBufferSource();
+			sourceNode.connect(analyser);
+			sourceNode.connect(context.destination);
+
+			// load the specified sound
+			var loadSound = function(url) {
+				var request = new XMLHttpRequest();
+				request.open('GET', url, true);
+				request.responseType = 'arraybuffer';
+
+				// When loaded decode the data
+				request.onload = function() {
+					OC.fadeOut("downloadAnimation");
+					// decode the data
+					context.decodeAudioData(request.response, function(buffer) {
+						// when the audio is decoded play the sound
+						playSound(buffer);
+					}, function error(){
+						//TODO More docu
+						console.log("Error Loading Song.")
+					});
+				};
+				request.send();
+			};
+
+			function playSound(buffer) {
+				sourceNode.buffer = buffer;
+				sourceNode.start(0);
+			}
+
+			loadSound("audio/sadRobot.ogg");
+
+			//while playing, analyse the bytes
+			scriptProcessor.onaudioprocess = function(e) {
+				var fb = e.inputBuffer;
+
+				var dataArray = new Uint8Array(fb.length);
+				analyser.getByteTimeDomainData(dataArray);
+
+
+
+				fft.forward(dataArray);
+				audioVisualization.animate(fft.spectrum);
+
+			};
 
 
 			//Create a new scene
@@ -63,15 +133,12 @@ var audioVisualization = new function(){
 			renderer = new THREE.WebGLRenderer( { clearAlpha: 1 } );
 			//Set the render size to size of the browser
 			renderer.setSize( window.innerWidth, window.innerHeight );
-			
-			//Init particle array 
-			particles = [];
+
 			
 			//Used to draw the circle
 			var circleBot = 0;
-			var circleTop = 0;
 			geometry = new THREE.Geometry();
-			sprite = THREE.ImageUtils.loadTexture( "gfx/particle.png" );
+			var sprite = THREE.ImageUtils.loadTexture( "gfx/particle.png" );
 			
 			var createVertex = function(circleBot,counter){
 				var vertex = new THREE.Vector3();
@@ -81,19 +148,19 @@ var audioVisualization = new function(){
 				vertex.z = Math.cos(circleBot) * 80*x;
 				
 				return vertex;
-			}
+			};
 			
 			
 			//create the inner rings
 			var counter = 0;
 			for(var x = 1;x<5;x++){
-				for ( i = 0; i < particleCount; i ++ ) {
+				for ( var i = 0; i < particleCount; i ++ ) {
 					var vertex = createVertex(circleBot,counter);
 					
 					geometry.vertices.push( vertex );
 
 					colors[ counter ] = new THREE.Color( 0xffffff );
-					colors[ counter ].setHSV( ( vertex.x + 1000 ) / 2000, 1, 1 );			
+					colors[ counter ].setHSV( ( vertex.x + 1000 ) / 2000, 1, 1 );
 					circleBot += 0.1;
 					counter++;
 				}
@@ -101,12 +168,12 @@ var audioVisualization = new function(){
 		
 			//create the 2 outer rings
 			for(var x = 0;x<2;x++){
-				for ( i = 0; i < particleCount; i ++ ) {
+				for ( var i = 0; i < particleCount; i ++ ) {
 					var vertex = createVertex(circleBot,counter);
 					geometry.vertices.push( vertex );
 
 					colors[ counter ] = new THREE.Color( 0xffffff );
-					colors[ counter ].setHSV( ( vertex.x + 1000 ) / 2000, 1, 1 );			
+					colors[ counter ].setHSV( ( vertex.x + 1000 ) / 2000, 1, 1 );
 					circleBot += 0.1;
 					counter++;
 				}
@@ -125,25 +192,7 @@ var audioVisualization = new function(){
 			//Add the rendered view to the body
 			container.appendChild(renderer.domElement);
 			
-			//Hook up the mouse-wheel events
-			
-			document.addEventListener('mousemove', this.mousemove, false);
-			document.addEventListener('DOMMouseScroll', this.wheel, false);
-			document.addEventListener('mousewheel', this.wheel, false);
-			
-			//Hook up the audio events
-			//---This currently is Firefox specific ---//
-			audio.addEventListener('MozAudioAvailable', this.audiowritten, false);
-			//called once if audio stream is ready for playback, get the meta information about this stream
-			//e.g. frameBufferLength/channels 
-			audio.addEventListener('loadedmetadata', this.audiometa, false);
-			
-			//Log the stats
-			stats = new Stats();
-			stats.domElement.style.position = 'absolute';
-			stats.domElement.style.top = '0';
-			stats.domElement.style.right = '0';
-			container.appendChild(stats.domElement);
+
 		},
 		//if the mouse is moved, change the camera view (will be done within the animate function )
 		mousemove: function(e){
@@ -178,46 +227,25 @@ var audioVisualization = new function(){
 			//Change the zoom value depending on delta
 			camera.position.z -= (delta * 60);
 		},
-		//called once to get meta informations
-		audiometa: function(){
-			channels = audio.mozChannels;
-			rate = audio.mozSampleRate;
-			frameBufferLength = audio.mozFrameBufferLength;
-			
-			fft = new FFT(frameBufferLength / channels, rate);
-		},
-		//calculates the signal-spectrum.
-		//therefore the dsp.js will be used (Whoop Whoop for open source)
-		audiowritten: function(event){
-			var fb = event.frameBuffer;
-            var signal = new Float32Array(fb.length / channels);
-			
-			for (var i = 0, fbl = frameBufferLength / 2; i < fbl; i++ ) {
-				// Assuming interlaced stereo channels,
-				// need to split and merge into a stero-mix mono signal
-				signal[i] = (fb[2*i] + fb[2*i+1]) / 2;
-			}
-			
-			fft.forward(signal);
-			audioVisualization.animate(fft.spectrum);
-		},
+
+
 		//animates the 3d visualization
 		//will be called every single time, the (audio)signal has been processed
 		animate: function(data){
+			stats.begin();
 			//fft.spectrum.length contains an array of audio data
 			camera.position.x += (mouseX - camera.position.x) * 0.05;
 			camera.position.y += (-mouseY - camera.position.y) * 0.05;
 			camera.position.x += ( mouseX - camera.position.x ) * 0.5;
 			camera.lookAt( scene.position );
-			audiomultiplier = 60;
-			
+
 			
 			for(var i in geometry.vertices){
 				var particle = geometry.vertices[i];
 				
 				if(i < geometry.vertices.length - (2*particleCount)){
-					//innner ring
-					particle.y = (data[i] * audiomultiplier) * 10 + 5;
+					//inner ring
+					particle.y = (data[i] * 8);
 
 				}else{
 					//outer ring
@@ -237,7 +265,7 @@ var audioVisualization = new function(){
 			}
 
 			renderer.render(scene, camera);
-			stats.update();
+			stats.end();
 		}
 	}
 }();
