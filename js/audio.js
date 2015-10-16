@@ -38,7 +38,8 @@
             context = new AudioContext(),
             sourceNode,
             analyser = context.createAnalyser(),
-            scriptProcessor;
+            scriptProcessor,
+            processedAudioData;
 
 
         var a = 0, b = 0;
@@ -98,6 +99,7 @@
                 function playSound(buffer) {
                     sourceNode.buffer = buffer;
                     sourceNode.start(0);
+                    audioVisualization.startAnimation();
                 }
 
                 loadSound("audio/sadRobot.ogg");
@@ -110,8 +112,7 @@
                     analyser.getByteTimeDomainData(dataArray);
 
                     fft.forward(dataArray);
-                    audioVisualization.animate(fft.spectrum);
-
+                    processedAudioData = fft.spectrum;
                 };
 
 
@@ -229,7 +230,9 @@
 
             //animates the 3d visualization
             //will be called every single time, the (audio)signal has been processed
-            animate: function (data) {
+            startAnimation: function () {
+
+                if(processedAudioData){
                 stats.begin();
                 //fft.spectrum.length contains an array of audio data
                 camera.position.x += (mouseX - camera.position.x) * 0.05;
@@ -243,7 +246,7 @@
 
                     if (i < geometry.vertices.length - (2 * particleCount)) {
                         //inner ring
-                        particle.y = (data[i] * 8);
+                        particle.y = (processedAudioData[i] * 8);
 
                     } else {
                         //outer ring
@@ -264,6 +267,10 @@
 
                 renderer.render(scene, camera);
                 stats.end();
+                }
+              requestAnimationFrame(audioVisualization.startAnimation);
+
+
             }
         }
     }();
